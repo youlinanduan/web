@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>二次元绘画基础讲义</title>
+<style>
+  :root{
+    --bg:#f6f4f0; --paper:#ffffff; --ink:#22201d; --ink2:#5f5952;
+    --line:#e2ddd5; --accent:#c9552e; --accent-soft:#fdf0ea;
+    --teal:#2f6f7a; --teal-soft:#eaf3f4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.65;
+  }
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+    padding:5vh 6vw;overflow-y:auto;
+  }
+  .slide.active{display:flex;animation:fadeUp .3s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .s-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);
+    padding-bottom:14px;margin-bottom:clamp(16px,2.6vh,32px);flex-shrink:0}
+  .s-num{font-size:clamp(12px,1vw,14px);color:var(--accent);font-weight:700;letter-spacing:.12em}
+  h2{font-size:clamp(22px,2.4vw,38px);font-weight:700;letter-spacing:-.01em;line-height:1.25}
+  .s-body{display:flex;flex-direction:column;justify-content:center;gap:clamp(12px,2vh,22px)}
+
+  p,li{font-size:clamp(14px,1.12vw,17px);color:var(--ink2)}
+  b,strong{color:var(--ink);font-weight:600}
+
+  ul.dot{list-style:none;display:flex;flex-direction:column;gap:9px}
+  ul.dot li{position:relative;padding-left:20px}
+  ul.dot li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;
+    border-radius:50%;background:var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2.2vw,32px)}
+  .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(12px,1.8vw,24px)}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;
+    padding:clamp(14px,1.6vw,22px)}
+  .card h3{font-size:clamp(15px,1.25vw,19px);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .card h3 .tag{font-size:.72em;font-weight:600;padding:2px 8px;border-radius:99px;
+    background:var(--accent-soft);color:var(--accent)}
+  .card.teal h3 .tag{background:var(--teal-soft);color:var(--teal)}
+
+  .callout{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:14px 18px;border-radius:0 8px 8px 0}
+  .callout.teal{background:var(--teal-soft);border-left-color:var(--teal)}
+
+  .fig{width:100%;height:auto;display:block}
+  .fig text{font-family:inherit;font-size:12px;fill:var(--ink2)}
+  .fig-wrap{display:flex;justify-content:center;align-items:center}
+  .fig-wrap svg{max-height:56vh;width:auto;max-width:100%}
+
+  /* 封面 */
+  .cover{justify-content:center;text-align:left}
+  .cover .kicker{font-size:clamp(12px,1vw,15px);letter-spacing:.3em;color:var(--accent);
+    font-weight:700;margin-bottom:18px}
+  .cover h1{font-size:clamp(34px,5vw,76px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .cover .sub{font-size:clamp(15px,1.6vw,24px);color:var(--ink2);margin-top:18px}
+  .cover .hint{position:absolute;bottom:6vh;font-size:clamp(12px,.95vw,14px);color:#a9a29a}
+
+  /* 目录 */
+  .toc{display:grid;grid-template-columns:1fr 1fr;gap:10px 40px}
+  .toc-item{display:flex;gap:14px;align-items:baseline;padding:9px 0;
+    border-bottom:1px dashed var(--line)}
+  .toc-item .n{color:var(--accent);font-weight:700;font-size:clamp(12px,1vw,15px);
+    min-width:26px;font-variant-numeric:tabular-nums}
+  .toc-item .t{font-size:clamp(14px,1.15vw,17px);color:var(--ink)}
+
+  /* 页脚导航 */
+  .nav{position:fixed;right:clamp(16px,3vw,40px);bottom:clamp(14px,2.5vh,26px);
+    display:flex;align-items:center;gap:10px;z-index:50}
+  .nav button{
+    width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink);cursor:pointer;font-size:16px;
+    display:flex;align-items:center;justify-content:center;transition:.15s;
+  }
+  .nav button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  .nav button:disabled{opacity:.3;cursor:default}
+  .nav button:disabled:hover{background:var(--paper);border-color:var(--line);color:var(--ink)}
+  .nav .counter{font-size:13px;color:#a9a29a;font-variant-numeric:tabular-nums;min-width:52px;text-align:center}
+
+  /* 进度条 */
+  .bar{position:fixed;left:0;top:0;height:3px;background:var(--accent);
+    transition:width .3s ease;z-index:60}
+
+  @media (max-width:820px){
+    .cols,.cols3,.toc{grid-template-columns:1fr}
+    .slide{padding:4vh 5vw}
+    .fig-wrap svg{max-height:38vh}
+  }
+  @media print{
+    body{overflow:visible;background:#fff}
+    .deck{position:static}
+    .slide{position:static;display:flex !important;height:100vh;page-break-after:always;
+      animation:none}
+    .nav,.bar{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar"></div>
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide active cover">
+  <div class="kicker">绘 画 基 础 讲 义</div>
+  <h1>二次元绘画基础</h1>
+  <p class="sub">日韩画风 · 人体结构 · 明暗交界线</p>
+  <p class="hint">← → 方向键翻页　·　共 18 页</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">目录</span><h2>这份讲义讲什么</h2></div>
+  <div class="s-body">
+    <div class="toc">
+      <div class="toc-item"><span class="n">01</span><span class="t">画风辨析：二次元 / 日系 / 韩系</span></div>
+      <div class="toc-item"><span class="n">02</span><span class="t">线条与线稿基础</span></div>
+      <div class="toc-item"><span class="n">03</span><span class="t">人体：比例与体块</span></div>
+      <div class="toc-item"><span class="n">04</span><span class="t">人体：动态与重心</span></div>
+      <div class="toc-item"><span class="n">05</span><span class="t">头部结构与三庭五眼</span></div>
+      <div class="toc-item"><span class="n">06</span><span class="t">光影：三大面与五大调</span></div>
+      <div class="toc-item"><span class="n">07</span><span class="t">明暗交界线（核心）</span></div>
+      <div class="toc-item"><span class="n">08</span><span class="t">上色流程与练习建议</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">01</span><h2>「二次元画风」到底是什么</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div>
+        <ul class="dot">
+          <li>它不是一种<b>技法</b>，而是一套约定俗成的<b>符号系统</b></li>
+          <li>核心三件套：<b>明确的轮廓线</b> + <b>平涂色块</b> + <b>简化的结构</b></li>
+          <li>比例是主动夸张的：眼睛放大、鼻子简化、下巴收窄、头身比压缩</li>
+          <li>它和写实的关系不是「差」与「好」，而是<b>取舍不同</b></li>
+        </ul>
+      </div>
+      <div class="callout">
+        <b>关键认知：</b><br>
+        二次元画风是「省略 + 强调」的结果。<br>
+        省略的是细节，强调的必须是你<b>真正理解</b>的结构。<br><br>
+        所以画二次元一样要学解剖和光影 —— 只是最后画出来的时候把它们藏起来了。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">01</span><h2>日系 vs 韩系：常见倾向</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="card">
+        <h3>日系 <span class="tag">符号化 · 赛璐璐</span></h3>
+        <ul class="dot">
+          <li><b>上色</b>：赛璐璐为主，色块边界清晰，硬边阴影</li>
+          <li><b>线稿</b>：存在感强，粗细变化明显，甚至主导画面</li>
+          <li><b>五官</b>：高度符号化，大眼、小鼻、小嘴</li>
+          <li><b>比例</b>：偏小（6–7 头身），肩窄，头大</li>
+          <li><b>追求</b>：辨识度、角色感、可爱 / 帅气的符号</li>
+        </ul>
+      </div>
+      <div class="card teal">
+        <h3>韩系 <span class="tag">氛围感 · 半厚涂</span></h3>
+        <ul class="dot">
+          <li><b>上色</b>：半厚涂 / 厚涂，过渡柔和，层次多</li>
+          <li><b>线稿</b>：弱化甚至无线稿，靠色块和光影造型</li>
+          <li><b>五官</b>：介于写实与符号之间，立体感强</li>
+          <li><b>比例</b>：接近写实（7–8 头身），肩宽，腿长</li>
+          <li><b>追求</b>：氛围、材质、光感、皮肤质感</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout teal">
+      <b>共同点：</b>两者都建立在扎实的人体结构 + 光影理解之上。风格决定「强调什么」，不决定「要不要学基础」。
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">02</span><h2>线条：先学会「画一根好线」</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div>
+        <ul class="dot">
+          <li><b>两头轻、中间重</b>：起笔和收笔轻，中间压下去，线才有「弹性」</li>
+          <li><b>线宽要分级</b>：外轮廓最粗，主要结构线次之，内部细节线最细</li>
+          <li><b>交界处加深</b>：两根线相交的地方加深，画面立刻「压得住」</li>
+          <li><b>不要蹭线</b>：用短线段反复蹭出来的线，永远脏且软</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>练习方法</h3>
+        <ul class="dot">
+          <li>每天画 20 条 15cm 长线，一笔到底，不修</li>
+          <li>画完对比：哪些线是「飘」的，哪些是「稳」的</li>
+          <li>临摹时只画线稿，不画颜色，强迫自己关注线</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">03</span><h2>人体比例：头身比是工具，不是规则</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="fig-wrap">
+        <svg viewBox="0 0 320 400" class="fig">
+          <!-- 虚线参考 -->
+          <g stroke="#c9552e" stroke-width="1" stroke-dasharray="4 4" opacity=".8">
+            <line x1="40" y1="20" x2="290" y2="20"/>
+            <line x1="40" y1="72" x2="290" y2="72"/>
+            <line x1="40" y1="124" x2="290" y2="124"/>
+            <line x1="40" y1="176" x2="290" y2="176"/>
+            <line x1="40" y1="228" x2="290" y2="228"/>
+            <line x1="40" y1="290" x2="290" y2="290"/>
+            <line x1="40" y1="356" x2="290" y2="356"/>
+          </g>
+          <!-- 人形 -->
+          <g fill="none" stroke="#22201d" stroke-width="2" stroke-linejoin="round">
+            <circle cx="150" cy="46" r="26"/>
+            <path d="M124 84 L176 84 L172 176 L128 176 Z"/>
+            <path d="M128 176 L172 176 L176 228 L124 228 Z"/>
+            <path d="M138 228 L132 290 L134 356"/>
+            <path d="M162 228 L168 290 L166 356"/>
+            <path d="M124 88 L106 160 L110 226"/>
+            <path d="M176 88 L194 160 L190 226"/>
+          </g>
+          <!-- 标注 -->
+          <g class="fig">
+            <text x="205" y="24">头顶</text>
+            <text x="205" y="76">下巴 · 1头</text>
+            <text x="205" y="128">乳线 · 2头</text>
+            <text x="205" y="180">腰 · 3头</text>
+            <text x="205" y="232">耻骨 · 4头</text>
+            <text x="205" y="294">膝 · 5头</text>
+            <text x="205" y="360">脚底 · 6.5头</text>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <ul class="dot">
+          <li><b>写实</b> 7.5–8 头身　<b>二次元</b> 6–7 头身　<b>Q 版</b> 3–4 头身</li>
+          <li>身体中点大致在<b>耻骨联合</b>附近</li>
+          <li>手臂自然下垂：<b>肘 ≈ 腰最细处</b>，<b>腕 ≈ 大转子</b>，<b>指尖 ≈ 大腿中段</b></li>
+          <li>肩宽：男性约 2 个头宽，女性约 1.5 个头宽</li>
+        </ul>
+        <div class="callout" style="margin-top:16px">
+          比例是用来<b>检查</b>的，不是用来<b>起稿</b>的。先画动态和体块，最后再用比例去核对。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">03</span><h2>体块化：把人体拆成几何体</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="fig-wrap">
+        <svg viewBox="0 0 320 340" class="fig">
+          <g fill="none" stroke="#22201d" stroke-width="2" stroke-linejoin="round">
+            <!-- 头 -->
+            <circle cx="160" cy="48" r="28" fill="#f0ece6"/>
+            <path d="M146 70 L174 70 L160 92 Z" fill="#f0ece6"/>
+            <!-- 脖子 -->
+            <line x1="160" y1="92" x2="160" y2="108"/>
+            <!-- 胸腔 -->
+            <path d="M126 108 Q 118 145 128 180 L192 180 Q 202 145 194 108 Z" fill="#e8e4de"/>
+            <!-- 骨盆 -->
+            <path d="M130 196 Q 124 228 138 254 L182 254 Q 196 228 190 196 Z" fill="#e8e4de"/>
+            <!-- 脊柱 -->
+            <line x1="160" y1="108" x2="160" y2="254" stroke="#c9552e"
+                  stroke-width="1.5" stroke-dasharray="5 5"/>
+          </g>
+          <g class="fig">
+            <text x="212" y="44">头 = 球 + 楔形</text>
+            <text x="212" y="132">胸腔 = 蛋形</text>
+            <text x="212" y="150">（可倾斜、可压缩）</text>
+            <text x="212" y="224">骨盆 = 碗形</text>
+            <text x="212" y="242">（决定腿的朝向）</text>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <ul class="dot">
+          <li><b>顺序</b>：动态线 → 三大块（头 / 胸 / 盆）→ 四肢圆柱 → 细节</li>
+          <li>头、胸腔、骨盆之间可以<b>扭转</b>，这是动态的来源</li>
+          <li>四肢用<b>圆柱 + 关节球</b>表示，先定长度和朝向，再画肌肉</li>
+          <li>永远不要在没摆好体块之前画五官和衣服</li>
+        </ul>
+        <div class="callout" style="margin-top:16px">
+          体块画对了，后面怎么画都不会太崩；体块错了，细节画得再精细也是歪的。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">04</span><h2>动态与重心</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="card">
+        <h3>动态线 Action Line</h3>
+        <ul class="dot">
+          <li>一条贯穿全身的曲线，从头顶经过脊柱到支撑脚</li>
+          <li>先画它，它决定这张画的<b>气质</b>：是舒展还是紧绷</li>
+          <li>动态线是「S」或「C」形时，画面最有张力</li>
+        </ul>
+      </div>
+      <div class="card teal">
+        <h3>重心与支撑</h3>
+        <ul class="dot">
+          <li>从<b>锁骨中点</b>（或第七颈椎）垂直向下画一条线</li>
+          <li>这条线必须落在<b>支撑面</b>内，人才站得住</li>
+          <li>站立时：肩线与胯线倾斜方向<b>相反</b>（contrapposto）</li>
+          <li>跑跳时：重心可以暂时离开支撑面</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout">
+      <b>练习：</b>用 30 秒画一个人物的动态线 + 三大块，不画任何细节。每天 10 张，两周后动态能力会有明显变化。
+    </div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">05</span><h2>头部：十字线与三庭五眼</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="fig-wrap">
+        <svg viewBox="0 0 360 270" class="fig">
+          <!-- 头 -->
+          <ellipse cx="180" cy="135" rx="72" ry="88" fill="#f7f5f1" stroke="#22201d" stroke-width="2"/>
+          <!-- 三庭参考线 -->
+          <g stroke="#c9552e" stroke-width="1" stroke-dasharray="4 4" opacity=".75">
+            <line x1="108" y1="92" x2="252" y2="92"/>
+            <line x1="108" y1="135" x2="252" y2="135"/>
+            <line x1="108" y1="178" x2="252" y2="178"/>
+          </g>
+          <!-- 中线 -->
+          <line x1="180" y1="47" x2="180" y2="223" stroke="#c9552e" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <!-- 眼睛 -->
+          <ellipse cx="151" cy="135" rx="14" ry="10" fill="#fff" stroke="#22201d" stroke-width="1.6"/>
+          <ellipse cx="209" cy="135" rx="14" ry="10" fill="#fff" stroke="#22201d" stroke-width="1.6"/>
+          <circle cx="151" cy="135" r="6" fill="#22201d"/>
+          <circle cx="209" cy="135" r="6" fill="#22201d"/>
+          <!-- 鼻 -->
+          <path d="M180 150 L176 168 L184 168" fill="none" stroke="#22201d" stroke-width="1.4"/>
+          <!-- 嘴 -->
+          <path d="M168 196 Q 180 202 192 196" fill="none" stroke="#22201d" stroke-width="1.4"/>
+          <!-- 标注 -->
+          <g class="fig">
+            <text x="258" y="96">发际线</text>
+            <text x="258" y="139">眉 / 眼线</text>
+            <text x="258" y="182">鼻底</text>
+            <text x="258" y="228">下巴</text>
+          </g>
+          <text x="112" y="252" class="fig" fill="#c9552e">五等分：脸宽 ≈ 5 个眼睛</text>
+        </svg>
+      </div>
+      <div>
+        <ul class="dot">
+          <li><b>先画球，再切面</b>：把头部当成一个球，切掉两侧和后脑的一部分</li>
+          <li><b>十字线</b>决定朝向 —— 竖线是脸的中轴，横线是眼睛的位置</li>
+          <li><b>三庭</b>：发际线→眉→鼻底→下巴，三段大致等长</li>
+          <li><b>五眼</b>：脸的宽度约等于五个眼睛，两眼之间隔一个眼</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <b>二次元的变形：</b>眼睛放大到 1.5–2 倍，鼻子简化成一个点或一条短线，下巴收窄成尖角，耳朵缩小并简化。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">06</span><h2>光影：三大面与五大调</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="fig-wrap">
+        <svg viewBox="0 0 520 290" class="fig">
+          <defs>
+            <linearGradient id="sphereL" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="55%" stop-color="#ece9e4"/>
+              <stop offset="100%" stop-color="#d5d0c8"/>
+            </linearGradient>
+          </defs>
+          <!-- 投影 -->
+          <ellipse cx="250" cy="235" rx="125" ry="20" fill="#dcd7cf"/>
+          <!-- 球体 -->
+          <circle cx="220" cy="135" r="90" fill="url(#sphereL)"/>
+          <!-- 暗部 -->
+          <path d="M265 57.1 A 90 90 0 0 1 265 212.9 Q 225 135 265 57.1 Z" fill="#b9b4ac"/>
+          <!-- 反光 -->
+          <path d="M288.9 77.1 A 90 90 0 0 1 288.9 192.9 Q 282 135 288.9 77.1 Z" fill="#cdc8c0"/>
+          <!-- 明暗交界线 -->
+          <path d="M265 57.1 Q 225 135 265 212.9 Q 255 135 265 57.1 Z" fill="#8b857c"/>
+          <!-- 高光 -->
+          <ellipse cx="178" cy="88" rx="20" ry="13" fill="#ffffff" opacity=".85"
+                   transform="rotate(-32 178 88)"/>
+          <!-- 标注 -->
+          <g stroke="#c9552e" stroke-width="1">
+            <line x1="60" y1="50" x2="168" y2="84"/>
+            <line x1="40" y1="140" x2="138" y2="158"/>
+            <line x1="330" y1="105" x2="252" y2="135"/>
+            <line x1="330" y1="185" x2="296" y2="140"/>
+            <line x1="400" y1="252" x2="285" y2="236"/>
+          </g>
+          <g class="fig">
+            <text x="14" y="46" fill="#c9552e">① 高光</text>
+            <text x="14" y="136" fill="#c9552e">② 亮部</text>
+            <text x="336" y="101" fill="#c9552e">③ 明暗交界线</text>
+            <text x="336" y="181" fill="#c9552e">④ 反光</text>
+            <text x="406" y="248" fill="#c9552e">⑤ 投影</text>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <ul class="dot">
+          <li><b>先定一个主光源</b>，全画面只服务它一个</li>
+          <li><b>三大面</b>：受光面（亮）、侧光面（灰）、背光面（暗）</li>
+          <li><b>五大调</b>：高光 / 亮部 / 明暗交界线 / 反光 / 投影</li>
+          <li>暗部里最暗的不是边缘，而是<b>明暗交界线</b>那一条</li>
+          <li>反光属于暗部，永远比亮部暗</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <b>顺序不能乱：</b>先分亮暗两大块 → 再在暗部里分交界线和反光 → 最后加高光。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">07</span><h2>明暗交界线：它不是一条「线」</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div>
+        <ul class="dot">
+          <li><b>定义：</b>形体上受光面与背光面的分界，位于光线与形体表面<b>相切</b>的位置</li>
+          <li><b>本质：</b>它不是画上去的线，而是<b>面与面的转折处</b></li>
+          <li><b>明度：</b>暗部中最暗的区域（仅次于投影和闭塞阴影）</li>
+          <li><b>形状：</b>由<b>形体</b>决定，不由光源决定。光源只改变它<b>出现的位置</b></li>
+        </ul>
+      </div>
+      <div class="callout">
+        <b>最重要的一句话：</b><br><br>
+        明暗交界线的形状 = 形体的形状。<br><br>
+        所以「画好明暗交界线」这件事，本质上就是「画好体积」。<br><br>
+        如果你画的明暗交界线是一条匀匀的、软软的带子，那说明你还没看清形体。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">07</span><h2>怎么找明暗交界线</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="fig-wrap">
+        <svg viewBox="0 0 520 300" class="fig">
+          <defs>
+            <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3"
+                    orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c9552e"/></marker>
+          </defs>
+          <!-- 光线 -->
+          <g stroke="#c9552e" stroke-width="2" marker-end="url(#ar)">
+            <line x1="60" y1="20" x2="120" y2="80"/>
+            <line x1="110" y1="10" x2="170" y2="70"/>
+            <line x1="160" y1="0" x2="220" y2="60"/>
+          </g>
+          <!-- 球 -->
+          <path d="M323.6 96.4 A 90 90 0 0 1 196.4 223.6 Z" fill="#c2bdb5"/>
+          <circle cx="260" cy="160" r="90" fill="none" stroke="#22201d" stroke-width="2"/>
+          <!-- 明暗交界线 -->
+          <path d="M323.6 96.4 A 90 90 0 0 1 196.4 223.6" fill="none"
+                stroke="#c9552e" stroke-width="6" stroke-linecap="round"/>
+          <!-- 辅助 -->
+          <line x1="260" y1="160" x2="323.6" y2="96.4" stroke="#2f6f7a"
+                stroke-width="1.4" stroke-dasharray="5 4"/>
+          <circle cx="260" cy="160" r="3" fill="#2f6f7a"/>
+          <g class="fig">
+            <text x="336" y="92" fill="#c9552e">切点</text>
+            <text x="270" y="140" fill="#2f6f7a">半径 ⟂ 光线</text>
+            <text x="40" y="110" fill="#c9552e">光源</text>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <ul class="dot">
+          <li><b>方法一（几何）：</b>光线的<b>垂线</b>与形体表面相交的那一圈点，连起来就是明暗交界线</li>
+          <li><b>方法二（体块）：</b>先把形体简化成球 / 圆柱 / 方体，在几何体上找，再套回人体</li>
+          <li><b>方法三（眯眼）：</b>眯起眼看，明暗交界线是最先消失的那条边界</li>
+          <li><b>方法四（触摸）：</b>想象用手摸这个形体，最陡的转折处就是它</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">07</span><h2>不同形体上的明暗交界线</h2></div>
+  <div class="s-body">
+    <div class="fig-wrap">
+      <svg viewBox="0 0 620 210" class="fig">
+        <!-- 球 -->
+        <path d="M136 54 A 65 65 0 0 1 44 146 Z" fill="#c2bdb5"/>
+        <circle cx="90" cy="100" r="65" fill="none" stroke="#22201d" stroke-width="2"/>
+        <path d="M136 54 A 65 65 0 0 1 44 146" fill="none" stroke="#c9552e"
+              stroke-width="5" stroke-linecap="round"/>
+        <text x="58" y="196" class="fig" fill="#22201d">球体 · 月牙形，两端消失</text>
+
+        <!-- 圆柱 -->
+        <rect x="258" y="45" width="84" height="110" fill="#e6e2dc"/>
+        <rect x="322" y="45" width="20" height="110" fill="#c2bdb5"/>
+        <path d="M258 45 L258 155 A 42 13 0 0 0 342 155 L342 45"
+              fill="none" stroke="#22201d" stroke-width="2"/>
+        <ellipse cx="300" cy="45" rx="42" ry="13" fill="#f2f0ec"
+                 stroke="#22201d" stroke-width="2"/>
+        <line x1="322" y1="47" x2="322" y2="153" stroke="#c9552e"
+              stroke-width="5" stroke-linecap="round"/>
+        <text x="252" y="196" class="fig" fill="#22201d">圆柱 · 直线，两端微弯</text>
+
+        <!-- 方体 -->
+        <polygon points="460,75 540,75 540,155 460,155" fill="#e6e2dc"/>
+        <polygon points="460,75 490,45 570,45 540,75" fill="#f2f0ec"/>
+        <polygon points="540,75 570,45 570,125 540,155" fill="#c2bdb5"/>
+        <polygon points="460,75 490,45 570,45 540,75 540,155 460,155"
+                 fill="none" stroke="#22201d" stroke-width="2"/>
+        <line x1="540" y1="75" x2="540" y2="155" stroke="#c9552e"
+              stroke-width="5" stroke-linecap="round"/>
+        <text x="470" y="196" class="fig" fill="#22201d">方体 · 硬边，转折明确</text>
+      </svg>
+    </div>
+    <div class="callout">
+      <b>人体上：</b>明暗交界线是「跟着结构走的柔和折线」。比如大腿上，它会随着股四头肌的起伏而弯曲；手臂上，它沿着肱二头肌和肱三头肌的分界走。它永远<b>不会是一条直线</b>。
+    </div>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">07</span><h2>明暗交界线的 5 个常见错误</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="card">
+        <h3>① 画成一条黑线</h3>
+        <p>它是<b>带</b>，不是描边。要有宽度、有虚实、有深浅变化。</p>
+      </div>
+      <div class="card">
+        <h3>② 位置错了</h3>
+        <p>它必须<b>垂直于光线方向</b>。光从左上来，它就不可能在正下方。</p>
+      </div>
+      <div class="card">
+        <h3>③ 一条线走到底</h3>
+        <p>不跟结构、从头到脚一样粗细一样深浅，画面立刻变成贴纸。</p>
+      </div>
+      <div class="card">
+        <h3>④ 忘记反光</h3>
+        <p>暗部一片死黑，形体就「闷」住了。反光要留，但永远比亮部暗。</p>
+      </div>
+    </div>
+    <div class="callout">
+      <b>⑤ 明暗交界线比投影还深</b> —— 不对。一般最暗的是<b>闭塞阴影</b>，其次是<b>投影靠近物体处</b>，再次才是明暗交界线。
+    </div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">07</span><h2>投影与闭塞阴影</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div class="card">
+        <h3>投影 Cast Shadow</h3>
+        <ul class="dot">
+          <li>物体挡住光线，投在<b>另一个面</b>上形成的暗区</li>
+          <li>形状由<b>光源方向</b>和<b>承接面的形状</b>共同决定</li>
+          <li>靠近物体处最实、最深；越远越虚、越淡</li>
+          <li>投影是「贴」在承接面上的，要跟着承接面的起伏走</li>
+        </ul>
+      </div>
+      <div class="card teal">
+        <h3>闭塞阴影 Ambient Occlusion</h3>
+        <ul class="dot">
+          <li>两个面靠得很近、光线几乎进不去的地方</li>
+          <li>画面中<b>最暗</b>的位置</li>
+          <li>常见位置：下巴下方、腋下、裙摆内侧、指缝、鼻孔</li>
+          <li>加闭塞是「一秒出效果」的利器，但不要滥用</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout teal">
+      <b>记忆口诀：</b>明暗交界线管<b>体积</b>，投影管<b>空间</b>，闭塞管<b>接触</b>。三者缺一，画面就平。
+    </div>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">08</span><h2>从线稿到成图：上色流程</h2></div>
+  <div class="s-body">
+    <div class="cols3">
+      <div class="card">
+        <h3>① 线稿</h3>
+        <p>分层画，线稿放最上层。外轮廓加粗，内部结构线放细。</p>
+      </div>
+      <div class="card">
+        <h3>② 底色</h3>
+        <p>每个部件单独一层。颜色先铺准，不要在这一步纠结阴影。</p>
+      </div>
+      <div class="card">
+        <h3>③ 一层阴影</h3>
+        <p>只画<b>明暗交界线 + 投影</b>，硬边，形状明确。</p>
+      </div>
+      <div class="card">
+        <h3>④ 二层阴影</h3>
+        <p>在明暗交界线附近加深，补上闭塞阴影。</p>
+      </div>
+      <div class="card">
+        <h3>⑤ 高光 / 反光</h3>
+        <p>高光要小要准，反光要弱。反光永远比亮部暗。</p>
+      </div>
+      <div class="card">
+        <h3>⑥ 调整</h3>
+        <p>整体压暗、加环境色、锐化边缘、检查剪影。</p>
+      </div>
+    </div>
+    <div class="callout">
+      <b>赛璐璐 vs 半厚涂的分岔点在第 ③ 步：</b>赛璐璐保留硬边，半厚涂在这一步之后把阴影边缘揉开、加入中间色过渡。
+    </div>
+  </div>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">08</span><h2>练习建议</h2></div>
+  <div class="s-body">
+    <div class="cols">
+      <div>
+        <ul class="dot">
+          <li><b>每天 10 分钟速写</b>：只抓动态线 + 三大块，不画细节</li>
+          <li><b>临摹时先分析</b>：拿到参考先问「他的体块怎么摆的」「光从哪来」</li>
+          <li><b>先画几何体</b>：画人之前，先画 20 个球体和圆柱的明暗</li>
+          <li><b>建立参考库</b>：按「动态 / 手 / 光影 / 服装」分类存图</li>
+          <li><b>并排复盘</b>：把自己的画和参考并排放，一眼就能看出差距在哪</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <b>一个反直觉的建议：</b><br><br>
+        不要急着上色。<br><br>
+        用黑白灰画 30 张完整的稿子，你会比同期一直画彩图的人进步更快 —— 因为黑白灰会强迫你面对<b>体积</b>，而彩色可以掩盖体积问题。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 18 -->
+<section class="slide">
+  <div class="s-head"><span class="s-num">结语</span><h2>记住这一句就够了</h2></div>
+  <div class="s-body" style="text-align:center;align-items:center">
+    <p style="font-size:clamp(20px,2.6vw,40px);color:var(--ink);font-weight:700;
+       line-height:1.5;max-width:900px">
+      结构决定光影，<br>光影反过来检验结构。
+    </p>
+    <p style="margin-top:28px;max-width:760px">
+      你画的每一道明暗交界线，都是你对形体理解的一次表态。<br>
+      画不准，不是手的问题，是还没看清。
+    </p>
+  </div>
+</section>
+
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="上一页">←</button>
+  <span class="counter" id="counter">1 / 18</span>
+  <button id="next" aria-label="下一页">→</button>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var prevBtn = document.getElementById('prev');
+  var nextBtn = document.getElementById('next');
+  var bar = document.getElementById('bar');
+  var i = 0;
+
+  function render(){
+    slides.forEach(function(s, k){ s.classList.toggle('active', k === i); });
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === slides.length - 1);
+    bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    slides[i].scrollTop = 0;
+  }
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    render();
+  }
+
+  prevBtn.addEventListener('click', function(){ go(i - 1); });
+  nextBtn.addEventListener('click', function(){ go(i + 1); });
+
+  document.addEventListener('keydown', function(e){
+    if (['ArrowRight','ArrowDown',' ','PageDown','Enter'].indexOf(e.key) > -1){
+      e.preventDefault(); go(i + 1);
+    } else if (['ArrowLeft','ArrowUp','PageUp','Backspace'].indexOf(e.key) > -1){
+      e.preventDefault(); go(i - 1);
+    } else if (e.key === 'Home'){ e.preventDefault(); go(0); }
+    else if (e.key === 'End'){ e.preventDefault(); go(slides.length - 1); }
+  });
+
+  var x0 = null;
+  document.addEventListener('touchstart', function(e){
+    x0 = e.touches[0].clientX;
+  }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 55) go(i + (dx < 0 ? 1 : -1));
+    x0 = null;
+  }, {passive:true});
+
+  render();
+})();
+</script>
+</body>
+</html>
